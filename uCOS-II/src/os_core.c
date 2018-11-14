@@ -1,29 +1,6 @@
-/*
-*********************************************************************************************************
-*                                                uC/OS-II
-*                                          The Real-Time Kernel
-*                                             CORE FUNCTIONS
-*
-*                              (c) Copyright 1992-2009, Micrium, Weston, FL
-*                                           All Rights Reserved
-*
-* File    : OS_CORE.C
-* By      : Jean J. Labrosse
-* Version : V2.91
-*
-* LICENSING TERMS:
-* ---------------
-*   uC/OS-II is provided in source form for FREE evaluation, for educational use or for peaceful research.
-* If you plan on using  uC/OS-II  in a commercial product you need to contact Micri祄 to properly license
-* its use in your product. We provide ALL the source code for your convenience and to help you experience
-* uC/OS-II.   The fact that the  source is provided does  NOT  mean that you can use it without  paying a
-* licensing fee.
-*********************************************************************************************************
-*/
-
 #ifndef  OS_MASTER_FILE
-#define  OS_GLOBALS
-#include "ucos_ii.h"
+    #define  OS_GLOBALS
+    #include "ucos_ii.h"
 #endif
 
 /*
@@ -35,7 +12,7 @@
 *********************************************************************************************************
 */
 
-INT8U  const  OSUnMapTbl[256] = {
+INT8U const OSUnMapTbl[256] = {
     0u, 0u, 1u, 0u, 2u, 0u, 1u, 0u, 3u, 0u, 1u, 0u, 2u, 0u, 1u, 0u, /* 0x00 to 0x0F                   */
     4u, 0u, 1u, 0u, 2u, 0u, 1u, 0u, 3u, 0u, 1u, 0u, 2u, 0u, 1u, 0u, /* 0x10 to 0x1F                   */
     5u, 0u, 1u, 0u, 2u, 0u, 1u, 0u, 3u, 0u, 1u, 0u, 2u, 0u, 1u, 0u, /* 0x20 to 0x2F                   */
@@ -61,20 +38,22 @@ INT8U  const  OSUnMapTbl[256] = {
 *********************************************************************************************************
 */
 
+// 初始化事件列表
 static  void  OS_InitEventList(void);
-
+// 初始化一些杂项
 static  void  OS_InitMisc(void);
-
+// 初始化就绪表
 static  void  OS_InitRdyList(void);
-
+// 初始化空闲任务
 static  void  OS_InitTaskIdle(void);
 
 #if OS_TASK_STAT_EN > 0u
-static  void  OS_InitTaskStat(void);
+    // 初始化统计任务
+    static  void  OS_InitTaskStat(void);
 #endif
-
+// 初始化任务控制块列表
 static  void  OS_InitTCBList(void);
-
+// 启动调度
 static  void  OS_SchedNew(void);
 
 /*$PAGE*/
@@ -104,17 +83,15 @@ static  void  OS_SchedNew(void);
 *********************************************************************************************************
 */
 
+// 是否启用事件名称功能
 #if (OS_EVENT_EN) && (OS_EVENT_NAME_EN > 0u)
-INT8U  OSEventNameGet (OS_EVENT   *pevent,
-                       INT8U     **pname,
-                       INT8U      *perr)
+// 获取事件的名字
+INT8U  OSEventNameGet (OS_EVENT *pevent, INT8U **pname, INT8U *perr)
 {
-    INT8U      len;
+    INT8U len;
 #if OS_CRITICAL_METHOD == 3u                     /* Allocate storage for CPU status register           */
     OS_CPU_SR  cpu_sr = 0u;
 #endif
-
-
 
 #ifdef OS_SAFETY_CRITICAL
     if (perr == (INT8U *)0) {
@@ -132,6 +109,7 @@ INT8U  OSEventNameGet (OS_EVENT   *pevent,
         return (0u);
     }
 #endif
+
     if (OSIntNesting > 0u) {                     /* See if trying to call from an ISR                  */
         *perr  = OS_ERR_NAME_GET_ISR;
         return (0u);
@@ -141,11 +119,10 @@ INT8U  OSEventNameGet (OS_EVENT   *pevent,
         case OS_EVENT_TYPE_MUTEX:
         case OS_EVENT_TYPE_MBOX:
         case OS_EVENT_TYPE_Q:
-             break;
-
+            break;
         default:
-             *perr = OS_ERR_EVENT_TYPE;
-             return (0u);
+            *perr = OS_ERR_EVENT_TYPE;
+            return (0u);
     }
     OS_ENTER_CRITICAL();
     *pname = pevent->OSEventName;
@@ -192,8 +169,6 @@ void  OSEventNameSet (OS_EVENT  *pevent,
     OS_CPU_SR  cpu_sr = 0u;
 #endif
 
-
-
 #ifdef OS_SAFETY_CRITICAL
     if (perr == (INT8U *)0) {
         OS_SAFETY_CRITICAL_EXCEPTION();
@@ -219,11 +194,11 @@ void  OSEventNameSet (OS_EVENT  *pevent,
         case OS_EVENT_TYPE_MUTEX:
         case OS_EVENT_TYPE_MBOX:
         case OS_EVENT_TYPE_Q:
-             break;
+            break;
 
         default:
-             *perr = OS_ERR_EVENT_TYPE;
-             return;
+            *perr = OS_ERR_EVENT_TYPE;
+            return;
     }
     OS_ENTER_CRITICAL();
     pevent->OSEventName = pname;
@@ -305,11 +280,7 @@ void  OSEventNameSet (OS_EVENT  *pevent,
 */
 /*$PAGE*/
 #if ((OS_EVENT_EN) && (OS_EVENT_MULTI_EN > 0u))
-INT16U  OSEventPendMulti (OS_EVENT  **pevents_pend,
-                          OS_EVENT  **pevents_rdy,
-                          void      **pmsgs_rdy,
-                          INT32U      timeout,
-                          INT8U      *perr)
+INT16U  OSEventPendMulti (OS_EVENT **pevents_pend, OS_EVENT **pevents_rdy, void **pmsgs_rdy, INT32U timeout, INT8U *perr)
 {
     OS_EVENT  **pevents;
     OS_EVENT   *pevent;
@@ -322,8 +293,6 @@ INT16U  OSEventPendMulti (OS_EVENT  **pevents_pend,
 #if (OS_CRITICAL_METHOD == 3u)                          /* Allocate storage for CPU status register    */
     OS_CPU_SR   cpu_sr = 0u;
 #endif
-
-
 
 #ifdef OS_SAFETY_CRITICAL
     if (perr == (INT8U *)0) {
@@ -351,7 +320,6 @@ INT16U  OSEventPendMulti (OS_EVENT  **pevents_pend,
 #endif
 
    *pevents_rdy = (OS_EVENT *)0;                        /* Init array to NULL in case of errors        */
-
     pevents     =  pevents_pend;
     pevent      = *pevents;
     while  (pevent != (OS_EVENT *)0) {
@@ -552,7 +520,168 @@ INT16U  OSEventPendMulti (OS_EVENT  **pevents_pend,
     return (events_rdy_nbr);
 }
 #endif
+/*$PAGE*/
+/*
+*********************************************************************************************************
+*                                             INITIALIZATION
+*                                    INITIALIZE MISCELLANEOUS VARIABLES
+*
+* Description: This function is called by OSInit() to initialize miscellaneous variables.
+*
+* Arguments  : none
+*
+* Returns    : none
+*********************************************************************************************************
+*/
+// OSInit()调用
+static  void  OS_InitMisc (void)
+{
+#if OS_TIME_GET_SET_EN > 0u
+    OSTime                    = 0uL;                       /* Clear the 32-bit system clock            */
+#endif
+    // 初始化中断嵌套计数器
+    OSIntNesting              = 0u;                        /* Clear the interrupt nesting counter      */
+    // 初始化调度锁计数器（中断嵌套锁）
+    OSLockNesting             = 0u;                        /* Clear the scheduling lock counter        */
+    // 初始化任务计数器
+    OSTaskCtr                 = 0u;                        /* Clear the number of tasks                */
+    // 初始化任务状态
+    OSRunning                 = OS_FALSE;                  /* Indicate that multitasking not started   */
+    // 初始化上下文切换计数器
+    OSCtxSwCtr                = 0u;                        /* Clear the context switch counter         */
+    // 初始化空闲计数器
+    OSIdleCtr                 = 0uL;                       /* Clear the 32-bit idle counter            */
 
+#if OS_TASK_STAT_EN > 0u // 启用统计任务干毛
+    OSIdleCtrRun              = 0uL;
+    OSIdleCtrMax              = 0uL;
+    OSStatRdy                 = OS_FALSE;                  /* Statistic task is not ready              */
+#endif
+
+#ifdef OS_SAFETY_CRITICAL_IEC61508
+    OSSafetyCriticalStartFlag = OS_FALSE;                  /* Still allow creation of objects          */
+#endif
+}
+/*$PAGE*/
+/*
+*********************************************************************************************************
+*                                             INITIALIZATION
+*                                       INITIALIZE THE READY LIST
+*
+* Description: This function is called by OSInit() to initialize the Ready List.
+*
+* Arguments  : none
+*
+* Returns    : none
+*********************************************************************************************************
+*/
+// OSInit()调用
+static  void  OS_InitRdyList (void)
+{
+    INT8U  i;
+    // 初始化任务就绪组
+    OSRdyGrp      = 0u;                                    /* Clear the ready list                     */
+    for (i = 0u; i < OS_RDY_TBL_SIZE; i++) {
+        OSRdyTbl[i] = 0u;
+    }
+
+    OSPrioCur     = 0u;
+    OSPrioHighRdy = 0u;
+    OSTCBHighRdy  = (OS_TCB *)0;
+    OSTCBCur      = (OS_TCB *)0;
+}
+/*$PAGE*/
+/*
+*********************************************************************************************************
+*                                             INITIALIZATION
+*                            INITIALIZE THE FREE LIST OF TASK CONTROL BLOCKS
+*
+* Description: This function is called by OSInit() to initialize the free list of OS_TCBs.
+*
+* Arguments  : none
+*
+* Returns    : none
+*********************************************************************************************************
+*/
+// OSInit()调用
+static  void  OS_InitTCBList (void)
+{
+    INT8U    ix;
+    INT8U    ix_next;
+    OS_TCB  *ptcb1;
+    OS_TCB  *ptcb2;
+    // 初始化任务控制块
+    OS_MemClr((INT8U *)&OSTCBTbl[0],     sizeof(OSTCBTbl));      /* Clear all the TCBs                 */
+    OS_MemClr((INT8U *)&OSTCBPrioTbl[0], sizeof(OSTCBPrioTbl));  /* Clear the priority table           */
+    for (ix = 0u; ix < (OS_MAX_TASKS + OS_N_SYS_TASKS - 1u); ix++) {    /* Init. list of free TCBs     */
+        ix_next =  ix + 1u;
+        ptcb1   = &OSTCBTbl[ix];
+        ptcb2   = &OSTCBTbl[ix_next];
+        ptcb1->OSTCBNext = ptcb2;
+#if OS_TASK_NAME_EN > 0u
+        ptcb1->OSTCBTaskName = (INT8U *)(void *)"?";             /* Unknown name                       */
+#endif
+    }
+    ptcb1                   = &OSTCBTbl[ix];
+    ptcb1->OSTCBNext        = (OS_TCB *)0;                       /* Last OS_TCB                        */
+#if OS_TASK_NAME_EN > 0u
+    ptcb1->OSTCBTaskName    = (INT8U *)(void *)"?";              /* Unknown name                       */
+#endif
+    OSTCBList               = (OS_TCB *)0;                       /* TCB lists initializations          */
+    OSTCBFreeList           = &OSTCBTbl[0];
+}
+/*$PAGE*/
+/*
+*********************************************************************************************************
+*                                             INITIALIZATION
+*                           INITIALIZE THE FREE LIST OF EVENT CONTROL BLOCKS
+*
+* Description: This function is called by OSInit() to initialize the free list of event control blocks.
+*
+* Arguments  : none
+*
+* Returns    : none
+*********************************************************************************************************
+*/
+// OSInit()调用
+static  void  OS_InitEventList (void)
+{
+#if (OS_EVENT_EN) && (OS_MAX_EVENTS > 0u)
+#if (OS_MAX_EVENTS > 1u)
+    INT16U     ix;
+    INT16U     ix_next;
+    OS_EVENT  *pevent1;
+    OS_EVENT  *pevent2;
+
+
+    OS_MemClr((INT8U *)&OSEventTbl[0], sizeof(OSEventTbl)); /* Clear the event table                   */
+    for (ix = 0u; ix < (OS_MAX_EVENTS - 1u); ix++) {        /* Init. list of free EVENT control blocks */
+        ix_next = ix + 1u;
+        pevent1 = &OSEventTbl[ix];
+        pevent2 = &OSEventTbl[ix_next];
+        pevent1->OSEventType    = OS_EVENT_TYPE_UNUSED;
+        pevent1->OSEventPtr     = pevent2;
+#if OS_EVENT_NAME_EN > 0u
+        pevent1->OSEventName    = (INT8U *)(void *)"?";     /* Unknown name                            */
+#endif
+    }
+    pevent1                         = &OSEventTbl[ix];
+    pevent1->OSEventType            = OS_EVENT_TYPE_UNUSED;
+    pevent1->OSEventPtr             = (OS_EVENT *)0;
+#if OS_EVENT_NAME_EN > 0u
+    pevent1->OSEventName            = (INT8U *)(void *)"?"; /* Unknown name                            */
+#endif
+    OSEventFreeList                 = &OSEventTbl[0];
+#else
+    OSEventFreeList                 = &OSEventTbl[0];       /* Only have ONE event control block       */
+    OSEventFreeList->OSEventType    = OS_EVENT_TYPE_UNUSED;
+    OSEventFreeList->OSEventPtr     = (OS_EVENT *)0;
+#if OS_EVENT_NAME_EN > 0u
+    OSEventFreeList->OSEventName    = (INT8U *)"?";         /* Unknown name                            */
+#endif
+#endif
+#endif
+}
 /*$PAGE*/
 /*
 *********************************************************************************************************
@@ -566,42 +695,43 @@ INT16U  OSEventPendMulti (OS_EVENT  **pevents_pend,
 * Returns    : none
 *********************************************************************************************************
 */
-
 void  OSInit (void)
 {
+    // 开始初始化接口相关的
     OSInitHookBegin();                                           /* Call port specific initialization code   */
-
+    // 初始化一些其他变量
     OS_InitMisc();                                               /* Initialize miscellaneous variables       */
-
+    // 初始化任务就绪表
     OS_InitRdyList();                                            /* Initialize the Ready List                */
-
+    // 初始化任务控制块列表
     OS_InitTCBList();                                            /* Initialize the free list of OS_TCBs      */
-
+    // 初始化事件列表
     OS_InitEventList();                                          /* Initialize the free list of OS_EVENTs    */
-
+// 是否启用事件标志
 #if (OS_FLAG_EN > 0u) && (OS_MAX_FLAGS > 0u)
     OS_FlagInit();                                               /* Initialize the event flag structures     */
 #endif
-
+// 是否启用内存管理
 #if (OS_MEM_EN > 0u) && (OS_MAX_MEM_PART > 0u)
     OS_MemInit();                                                /* Initialize the memory manager            */
 #endif
-
+// 是否启用消息队列
 #if (OS_Q_EN > 0u) && (OS_MAX_QS > 0u)
     OS_QInit();                                                  /* Initialize the message queue structures  */
 #endif
-
+    // 创建系统任务 -- 空闲任务
     OS_InitTaskIdle();                                           /* Create the Idle Task                     */
+// 是否需要系统任务 -- 统计任务
 #if OS_TASK_STAT_EN > 0u
     OS_InitTaskStat();                                           /* Create the Statistic Task                */
 #endif
-
+// 是否启用定时器管理
 #if OS_TMR_EN > 0u
     OSTmr_Init();                                                /* Initialize the Timer Manager             */
 #endif
-
+    // 接口相关的初始化完毕
     OSInitHookEnd();                                             /* Call port specific init. code            */
-
+// 是否开启调试模式
 #if OS_DEBUG_EN > 0u
     OSDebugInit();
 #endif
@@ -1258,128 +1388,9 @@ void  OS_EventWaitListInit (OS_EVENT *pevent)
     }
 }
 #endif
-/*$PAGE*/
-/*
-*********************************************************************************************************
-*                                             INITIALIZATION
-*                           INITIALIZE THE FREE LIST OF EVENT CONTROL BLOCKS
-*
-* Description: This function is called by OSInit() to initialize the free list of event control blocks.
-*
-* Arguments  : none
-*
-* Returns    : none
-*********************************************************************************************************
-*/
-
-static  void  OS_InitEventList (void)
-{
-#if (OS_EVENT_EN) && (OS_MAX_EVENTS > 0u)
-#if (OS_MAX_EVENTS > 1u)
-    INT16U     ix;
-    INT16U     ix_next;
-    OS_EVENT  *pevent1;
-    OS_EVENT  *pevent2;
 
 
-    OS_MemClr((INT8U *)&OSEventTbl[0], sizeof(OSEventTbl)); /* Clear the event table                   */
-    for (ix = 0u; ix < (OS_MAX_EVENTS - 1u); ix++) {        /* Init. list of free EVENT control blocks */
-        ix_next = ix + 1u;
-        pevent1 = &OSEventTbl[ix];
-        pevent2 = &OSEventTbl[ix_next];
-        pevent1->OSEventType    = OS_EVENT_TYPE_UNUSED;
-        pevent1->OSEventPtr     = pevent2;
-#if OS_EVENT_NAME_EN > 0u
-        pevent1->OSEventName    = (INT8U *)(void *)"?";     /* Unknown name                            */
-#endif
-    }
-    pevent1                         = &OSEventTbl[ix];
-    pevent1->OSEventType            = OS_EVENT_TYPE_UNUSED;
-    pevent1->OSEventPtr             = (OS_EVENT *)0;
-#if OS_EVENT_NAME_EN > 0u
-    pevent1->OSEventName            = (INT8U *)(void *)"?"; /* Unknown name                            */
-#endif
-    OSEventFreeList                 = &OSEventTbl[0];
-#else
-    OSEventFreeList                 = &OSEventTbl[0];       /* Only have ONE event control block       */
-    OSEventFreeList->OSEventType    = OS_EVENT_TYPE_UNUSED;
-    OSEventFreeList->OSEventPtr     = (OS_EVENT *)0;
-#if OS_EVENT_NAME_EN > 0u
-    OSEventFreeList->OSEventName    = (INT8U *)"?";         /* Unknown name                            */
-#endif
-#endif
-#endif
-}
-/*$PAGE*/
-/*
-*********************************************************************************************************
-*                                             INITIALIZATION
-*                                    INITIALIZE MISCELLANEOUS VARIABLES
-*
-* Description: This function is called by OSInit() to initialize miscellaneous variables.
-*
-* Arguments  : none
-*
-* Returns    : none
-*********************************************************************************************************
-*/
 
-static  void  OS_InitMisc (void)
-{
-#if OS_TIME_GET_SET_EN > 0u
-    OSTime                    = 0uL;                       /* Clear the 32-bit system clock            */
-#endif
-
-    OSIntNesting              = 0u;                        /* Clear the interrupt nesting counter      */
-    OSLockNesting             = 0u;                        /* Clear the scheduling lock counter        */
-
-    OSTaskCtr                 = 0u;                        /* Clear the number of tasks                */
-
-    OSRunning                 = OS_FALSE;                  /* Indicate that multitasking not started   */
-
-    OSCtxSwCtr                = 0u;                        /* Clear the context switch counter         */
-    OSIdleCtr                 = 0uL;                       /* Clear the 32-bit idle counter            */
-
-#if OS_TASK_STAT_EN > 0u
-    OSIdleCtrRun              = 0uL;
-    OSIdleCtrMax              = 0uL;
-    OSStatRdy                 = OS_FALSE;                  /* Statistic task is not ready              */
-#endif
-
-#ifdef OS_SAFETY_CRITICAL_IEC61508
-    OSSafetyCriticalStartFlag = OS_FALSE;                  /* Still allow creation of objects          */
-#endif
-}
-/*$PAGE*/
-/*
-*********************************************************************************************************
-*                                             INITIALIZATION
-*                                       INITIALIZE THE READY LIST
-*
-* Description: This function is called by OSInit() to initialize the Ready List.
-*
-* Arguments  : none
-*
-* Returns    : none
-*********************************************************************************************************
-*/
-
-static  void  OS_InitRdyList (void)
-{
-    INT8U  i;
-
-
-    OSRdyGrp      = 0u;                                    /* Clear the ready list                     */
-    for (i = 0u; i < OS_RDY_TBL_SIZE; i++) {
-        OSRdyTbl[i] = 0u;
-    }
-
-    OSPrioCur     = 0u;
-    OSPrioHighRdy = 0u;
-
-    OSTCBHighRdy  = (OS_TCB *)0;
-    OSTCBCur      = (OS_TCB *)0;
-}
 
 /*$PAGE*/
 /*
@@ -1505,47 +1516,7 @@ static  void  OS_InitTaskStat (void)
 #endif
 }
 #endif
-/*$PAGE*/
-/*
-*********************************************************************************************************
-*                                             INITIALIZATION
-*                            INITIALIZE THE FREE LIST OF TASK CONTROL BLOCKS
-*
-* Description: This function is called by OSInit() to initialize the free list of OS_TCBs.
-*
-* Arguments  : none
-*
-* Returns    : none
-*********************************************************************************************************
-*/
 
-static  void  OS_InitTCBList (void)
-{
-    INT8U    ix;
-    INT8U    ix_next;
-    OS_TCB  *ptcb1;
-    OS_TCB  *ptcb2;
-
-
-    OS_MemClr((INT8U *)&OSTCBTbl[0],     sizeof(OSTCBTbl));      /* Clear all the TCBs                 */
-    OS_MemClr((INT8U *)&OSTCBPrioTbl[0], sizeof(OSTCBPrioTbl));  /* Clear the priority table           */
-    for (ix = 0u; ix < (OS_MAX_TASKS + OS_N_SYS_TASKS - 1u); ix++) {    /* Init. list of free TCBs     */
-        ix_next =  ix + 1u;
-        ptcb1   = &OSTCBTbl[ix];
-        ptcb2   = &OSTCBTbl[ix_next];
-        ptcb1->OSTCBNext = ptcb2;
-#if OS_TASK_NAME_EN > 0u
-        ptcb1->OSTCBTaskName = (INT8U *)(void *)"?";             /* Unknown name                       */
-#endif
-    }
-    ptcb1                   = &OSTCBTbl[ix];
-    ptcb1->OSTCBNext        = (OS_TCB *)0;                       /* Last OS_TCB                        */
-#if OS_TASK_NAME_EN > 0u
-    ptcb1->OSTCBTaskName    = (INT8U *)(void *)"?";              /* Unknown name                       */
-#endif
-    OSTCBList               = (OS_TCB *)0;                       /* TCB lists initializations          */
-    OSTCBFreeList           = &OSTCBTbl[0];
-}
 /*$PAGE*/
 /*
 *********************************************************************************************************
